@@ -1,10 +1,15 @@
-import { Suspense } from 'react';
-import ResetPasswordForm from './ResetPasswordForm';
+'use client'; // Must be at the top
+import { useSearchParams } from 'next/navigation';
 
-export default function ResetPasswordPage() {
+export default function ResetPasswordForm() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token');
+  
   return (
-    <Suspense fallback={<div>Loading ...</div>}>
-      <ResetPasswordForm />
-    </Suspense>
+    <div>
+      <h1>Reset Password</h1>
+      <p>Token: {token}</p>
+      {/* Your form implementation here */}
+    </div>
   );
 }
