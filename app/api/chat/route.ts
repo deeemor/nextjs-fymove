@@ -5,7 +5,6 @@ const ollama = new Ollama({ host: 'http://127.0.0.1:11435' });
 
 export const maxDuration = 15;
 
-// Enhanced language detection with more patterns
 const languagePatterns = {
   german: /[äöüßÄÖÜ]|^\s*[a-zA-Z\s]*(wie|was|wo|wann|warum|können|bitte|danke)\s/i,
   arabic: /[\u0600-\u06FF]/,
@@ -21,7 +20,6 @@ function detectLanguage(text: string): SupportedLanguage {
   return 'english';
 }
 
-// Handle basic conversation patterns
 function isBasicInteraction(message: string): boolean {
   const basicPatterns = {
     greeting: /^(hi|hello|hey|hallo|guten tag|merhaba|hola)\b/i,
@@ -156,8 +154,12 @@ He's basically a real-life superhero!`;
 };
 
 export async function POST(req: Request) {
+  let message = ''; // ✅ Declared outside try block
+
   try {
-    const { message } = await req.json();
+    const body = await req.json();
+    message = body.message;
+
     if (!message?.trim()) {
       return NextResponse.json({ 
         response: "Please provide a message.",
@@ -166,8 +168,7 @@ export async function POST(req: Request) {
     }
 
     const language = detectLanguage(message);
-    
-    // Handle basic interactions differently
+
     if (isBasicInteraction(message)) {
       const basicResponse = getBasicResponse(message, language);
       return NextResponse.json({
@@ -194,27 +195,17 @@ export async function POST(req: Request) {
       throw new Error('No response generated');
     }
 
-    // Clean and format the response
     let cleanedResponse = response.response
       .trim()
       .split('\n')[0]
       .replace(/^(I think|I believe|I would say|Maybe|Perhaps|Creo que|Pienso que|Tal vez)/i, '')
       .trim();
 
-    // Add language-specific emoji indicators
     const languageEmoji: Record<SupportedLanguage, string> = {
       german: '🇩🇪',
       arabic: 'AR',
       spanish: '🇪🇸',
       english: '🌐'
-    };
-
-    // Language-specific error messages
-    const errorMessages: Record<SupportedLanguage, string> = {
-      english: "I'm having trouble understanding. Could you rephrase that?",
-      spanish: "Tengo problemas para entender. ¿Podrías reformular la pregunta?",
-      german: "Ich habe Schwierigkeiten zu verstehen. Könnten Sie das anders formulieren?",
-      arabic: "لدي صعوبة في الفهم. هل يمكنك إعادة صياغة السؤال؟"
     };
 
     return NextResponse.json({
@@ -224,6 +215,9 @@ export async function POST(req: Request) {
 
   } catch (error) {
     console.error('Chat error:', error);
+
+    const safeMessage = typeof message === 'string' ? message : '';
+    const language = detectLanguage(safeMessage) as SupportedLanguage;
     
     const errorMessages: Record<SupportedLanguage, Record<string, string>> = {
       english: {
@@ -248,7 +242,6 @@ export async function POST(req: Request) {
       }
     };
 
-    const language = detectLanguage(message || "") as SupportedLanguage;
     const errorMessage = error instanceof Error 
       ? (errorMessages[language][error.message as keyof typeof errorMessages[typeof language]] || errorMessages[language].default)
       : errorMessages[language].default;
